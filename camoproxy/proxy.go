@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/mux"
 	"io"
 	"net"
+  "bytes"
+  //"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -53,108 +55,137 @@ type Proxy struct {
 	metrics   ProxyMetrics
 }
 
-// ServerHTTP handles the client request, validates the request is validly
-// HMAC signed, filters based on the Allow list, and then proxies
-// valid requests to the desired endpoint. Responses are filtered for
-// proper image content types.
-func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	gologit.Debugln("Request:", req.URL)
-	if p.metrics != nil {
-		go p.metrics.AddServed()
-	}
+// Process the body of the request before writing to the response.
+func (p *Proxy) processRequest(w http.ResponseWriter, req *http.Request) {
+}
 
-	w.Header().Set("Server", ServerNameVer)
+// Do we consider this a valid and safe request to perform
+func (p *Proxy) validateRequest(w http.ResponseWriter, req *http.Request, surl string) bool {
+  u, err := url.Parse(surl)
+  if err != nil {
+    gologit.Debugln(err)
+    http.Error(w, "Bad url", http.StatusBadRequest)
+    return false
+  }
 
-	if req.Header.Get("Via") == ServerNameVer {
-		http.Error(w, "Request loop failure", http.StatusNotFound)
-		return
-	}
+  u.Host = strings.ToLower(u.Host)
+  if u.Host == "" || localhostRegex.MatchString(u.Host) {
+    http.Error(w, "Bad url", http.StatusNotFound)
+    return false
+  }
 
-	vars := mux.Vars(req)
-	surl, ok := encoding.DecodeUrl(&p.hmacKey, vars["sigHash"], vars["encodedUrl"])
-	if !ok {
-		http.Error(w, "Bad Signature", http.StatusForbidden)
-		return
-	}
-	gologit.Debugln("URL:", surl)
+  // if allowList is set, require match
+  matchFound := true
+  if len(p.allowList) > 0 {
+    matchFound = false
+    for _, rgx := range p.allowList {
+      if rgx.MatchString(u.Host) {
+        matchFound = true
+      }
+    }
+  }
+  if !matchFound {
+    http.Error(w, "Allowlist host failure", http.StatusNotFound)
+    return false
+  }
 
-	u, err := url.Parse(surl)
-	if err != nil {
-		gologit.Debugln(err)
-		http.Error(w, "Bad url", http.StatusBadRequest)
-		return
-	}
+  // filter out rfc1918 hosts
+  ip := net.ParseIP(u.Host)
+  if ip != nil {
+    if addr1918PrefixRegex.MatchString(ip.String()) {
+      http.Error(w, "Denylist host failure", http.StatusNotFound)
+      return false
+    }
+  }
 
-	u.Host = strings.ToLower(u.Host)
-	if u.Host == "" || localhostRegex.MatchString(u.Host) {
-		http.Error(w, "Bad url", http.StatusNotFound)
-		return
-	}
+  return true
+}
 
-	// if allowList is set, require match
-	matchFound := true
-	if len(p.allowList) > 0 {
-		matchFound = false
-		for _, rgx := range p.allowList {
-			if rgx.MatchString(u.Host) {
-				matchFound = true
-			}
-		}
-	}
-	if !matchFound {
-		http.Error(w, "Allowlist host failure", http.StatusNotFound)
-		return
-	}
+// Defines the request we use to fetch the requested resource
+func (p *Proxy) buildRequest(w http.ResponseWriter, req *http.Request, surl string) (r *http.Request, err error) {
+  nreq, err := http.NewRequest("GET", surl, nil)
+  if err != nil {
+    gologit.Debugln("Could not create NewRequest", err)
+    http.Error(w, "Error Fetching Resource", http.StatusBadGateway)
+    return nreq, err
+  }
 
-	// filter out rfc1918 hosts
-	ip := net.ParseIP(u.Host)
-	if ip != nil {
-		if addr1918PrefixRegex.MatchString(ip.String()) {
-			http.Error(w, "Denylist host failure", http.StatusNotFound)
-			return
-		}
-	}
+  // filter headers
+  p.copyHeader(&nreq.Header, &req.Header, &ValidReqHeaders)
+  if req.Header.Get("X-Forwarded-For") == "" {
+    host, _, err := net.SplitHostPort(req.RemoteAddr)
+    if err == nil && !addr1918PrefixRegex.MatchString(host) {
+      nreq.Header.Add("X-Forwarded-For", host)
+    }
+  }
 
-	nreq, err := http.NewRequest("GET", surl, nil)
-	if err != nil {
-		gologit.Debugln("Could not create NewRequest", err)
-		http.Error(w, "Error Fetching Resource", http.StatusBadGateway)
-		return
-	}
+  // add an accept header if the client didn't send one
+  if nreq.Header.Get("Accept") == "" {
+    nreq.Header.Add("Accept", "image/*")
+  }
 
-	// filter headers
-	p.copyHeader(&nreq.Header, &req.Header, &ValidReqHeaders)
-	if req.Header.Get("X-Forwarded-For") == "" {
-		host, _, err := net.SplitHostPort(req.RemoteAddr)
-		if err == nil && !addr1918PrefixRegex.MatchString(host) {
-			nreq.Header.Add("X-Forwarded-For", host)
-		}
-	}
+  // Don't specify encoding expicitly, it causes response 
+  // not to be decoded automatically by Transport.  We can
+  // still act upon this when sending to the client...
+  nreq.Header.Del("Accept-Encoding")
 
-	// add an accept header if the client didn't send one
-	if nreq.Header.Get("Accept") == "" {
-		nreq.Header.Add("Accept", "image/*")
-	}
+  nreq.Header.Add("connection", "close")
+  nreq.Header.Add("user-agent", ServerNameVer)
+  nreq.Header.Add("via", ServerNameVer)
+  return nreq, nil
+}
 
-	nreq.Header.Add("connection", "close")
-	nreq.Header.Add("user-agent", ServerNameVer)
-	nreq.Header.Add("via", ServerNameVer)
+// Re-writes and absolute http requests in CSS
+func (p *Proxy) TransformStream(w http.ResponseWriter, r io.Reader) (written int64, err error) {
+  return io.Copy(w, r);
+}
 
-	resp, err := p.client.Do(nreq)
-	if err != nil {
-		gologit.Debugln("Could not connect to endpoint", err)
-		if strings.Contains(err.Error(), "timeout") {
-			http.Error(w, "Error Fetching Resource", http.StatusBadGateway)
-		} else {
-			http.Error(w, "Error Fetching Resource", http.StatusNotFound)
-		}
-		return
-	}
-	defer resp.Body.Close()
+// Does a simple regexp search replace on anything written to it
+// and proxies to `writer`
+type ReWriter struct {
+  writer io.Writer
+  // flush me if you can
+  from regexp.Regexp
+  to []byte
+  fold_condition regexp.Regexp
+  buf bytes.Buffer
+}
 
+// Creates a rewriter that will dutifully rewrite any occurences of
+// http:// with https:// in whatever is written to it
+func NewCSSReWriter(writer io.Writer) (w *ReWriter, err error) {
+  from, err := regexp.Compile("http://")
+  if err != nil {
+    return nil, err
+  }
+  fold_condition, err := regexp.Compile("h(t(t(p(:(//?)?)?)?)?)?$")
+  if err != nil {
+    return nil, err
+  }
+  rewriter := ReWriter{
+    writer: writer,
+    from: *from,
+    to: []byte("https://"),
+    fold_condition: *fold_condition,
+  }
+  return &rewriter, nil
+}
+
+func (w *ReWriter) Write(buf []byte) (nw int, ew error) {
+  w.buf.Write(buf)
+  // If we have a potential match on the fold, fill the buffer and wait
+  // for more data.
+  if w.fold_condition.Match(buf) {
+    return 0, nil
+  }
+  return w.writer.Write(w.from.ReplaceAll(w.buf.Bytes(), w.to))
+}
+
+// Given our request response, do the appropriate thing with it
+func (p *Proxy) handleResponse(w http.ResponseWriter, resp *http.Response, surl string) (written int64, err error) {
 	// check for too large a response
 	if resp.ContentLength > p.maxSize {
-		gologit.Debugln("Content length exceeded", surl)
+    gologit.Debugln("Content length exceeded", surl)
 		http.Error(w, "Content length exceeded", http.StatusNotFound)
 		return
 	}
@@ -162,9 +193,26 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch resp.StatusCode {
 	case 200:
 		// check content type
-		ct, ok := resp.Header[http.CanonicalHeaderKey("content-type")]
-		if !ok || ct[0][:6] != "image/" {
-			gologit.Debugln("Non-Image content-type returned", u)
+		content_types, _ := resp.Header[http.CanonicalHeaderKey("content-type")]
+    content_type := content_types[0]
+    h := w.Header()
+    p.copyHeader(&h, &resp.Header, &ValidRespHeaders)
+    h.Set("X-Content-Type-Options", "nosniff")
+    h.Set("Date", formattedDate.String())
+    w.WriteHeader(resp.StatusCode)
+
+    if content_type[:6] == "image/" {
+      // Just a straight copy for images
+      return io.Copy(w, resp.Body)
+    } else if content_type == "text/css" {
+      // When we have CSS, make sure to rewrite `url(...)`s securely
+      secure, err := NewCSSReWriter(w)
+      if err != nil {
+        panic("Failed to create CSS ReWriter")
+      }
+      return io.Copy(secure, resp.Body)
+    } else {
+			gologit.Debugln("Non-Image content-type returned", surl)
 			http.Error(w, "Non-Image content-type returned",
 				http.StatusBadRequest)
 			return
@@ -195,25 +243,61 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
 	}
+}
 
-	h := w.Header()
-	p.copyHeader(&h, &resp.Header, &ValidRespHeaders)
-	h.Set("X-Content-Type-Options", "nosniff")
-	h.Set("Date", formattedDate.String())
-	w.WriteHeader(resp.StatusCode)
+// ServerHTTP handles the client request, validates the request is validly
+// HMAC signed, filters based on the Allow list, and then proxies
+// valid requests to the desired endpoint. Responses are filtered for
+// proper image content types.
+func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	gologit.Debugln("Request:", req.URL)
+	if p.metrics != nil {
+		go p.metrics.AddServed()
+	}
 
-	// since this uses io.Copy from the respBody, it is streaming
-	// from the request to the response. This means it will nearly
-	// always end up with a chunked response.
-	// Change to the following to send whole body at once, and
-	// read whole body at once too:
-	//    body, err := ioutil.ReadAll(resp.Body)
-	//    if err != nil {
-	//        gologit.Println("Error writing response:", err)
-	//    }
-	//    w.Write(body)
-	// Might use quite a bit of memory though. Untested.
-	bW, err := io.Copy(w, resp.Body)
+	w.Header().Set("Server", ServerNameVer)
+
+	if req.Header.Get("Via") == ServerNameVer {
+		http.Error(w, "Request loop failure", http.StatusNotFound)
+		return
+	}
+
+	vars := mux.Vars(req)
+	surl, ok := encoding.DecodeUrl(&p.hmacKey, vars["sigHash"], vars["encodedUrl"])
+	if !ok {
+		http.Error(w, "Bad Signature", http.StatusForbidden)
+		return
+	}
+	gologit.Debugln("URL:", surl)
+
+  // Sanity check the request
+  if !p.validateRequest(w, req, surl) {
+    return
+  }
+
+  // Create the request we wish to use, based on the one that we recieved
+	nreq, err := p.buildRequest(w, req, surl)
+	if err != nil {
+		gologit.Debugln("Could not create NewRequest", err)
+		http.Error(w, "Error Fetching Resource", http.StatusBadGateway)
+		return
+	}
+
+  // Perform the resource request
+	resp, err := p.client.Do(nreq)
+	defer resp.Body.Close()
+	if err != nil {
+		gologit.Debugln("Could not connect to endpoint", err)
+		if strings.Contains(err.Error(), "timeout") {
+			http.Error(w, "Error Fetching Resource", http.StatusBadGateway)
+		} else {
+			http.Error(w, "Error Fetching Resource", http.StatusNotFound)
+		}
+		return
+	}
+
+  // Handle the response
+  nresp, err := p.handleResponse(w, resp, surl)
 	if err != nil {
 		// only log if not broken pipe. broken pipe means the client
 		// terminated conn for some reason.
@@ -225,7 +309,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if p.metrics != nil {
-		go p.metrics.AddBytes(bW)
+		go p.metrics.AddBytes(nresp)
 	}
 	gologit.Debugln(req, resp.StatusCode)
 }

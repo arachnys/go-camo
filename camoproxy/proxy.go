@@ -214,7 +214,8 @@ func (p *Proxy) handleResponse(w http.ResponseWriter, resp *http.Response, surl 
         panic("Failed to create CSS ReWriter")
       }
       io.Copy(secure, resp.Body)
-      return secure.Flush()
+      nw, err := secure.Flush()
+      return int64(nw), err
     } else {
 			gologit.Debugln("Non-Image content-type returned", surl)
 			http.Error(w, "Non-Image content-type returned",

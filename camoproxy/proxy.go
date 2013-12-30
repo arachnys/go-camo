@@ -10,7 +10,6 @@ import (
 	"io"
 	"net"
   "bytes"
-  //"fmt"
 	"net/http"
 	"net/url"
 	"regexp"

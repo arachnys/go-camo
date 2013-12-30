@@ -34,6 +34,7 @@ type Config struct {
 	NoFollowRedirects bool
 	// Request timeout is a timeout for fetching upstream data.
 	RequestTimeout    time.Duration
+  // Specifies the transport to use, such that we can mock for testing.
 }
 
 // Interface for Proxy to use for stats/metrics.
@@ -157,6 +158,7 @@ func NewCSSReWriter(writer io.Writer) (w *ReWriter, err error) {
   if err != nil {
     return nil, err
   }
+  // I'm sure there's a less messy way of doing this...
   fold_condition, err := regexp.Compile("h(t(t(p(:(//?)?)?)?)?)?$")
   if err != nil {
     return nil, err
@@ -181,7 +183,9 @@ func (w *ReWriter) Write(buf []byte) (nw int, ew error) {
 }
 
 func (w *ReWriter) Flush() (nw int, ew error) {
-  return w.writer.Write(w.from.ReplaceAll(w.buf.Bytes(), w.to))
+  buf := w.buf.Bytes()
+  w.buf.Reset()
+  return w.writer.Write(w.from.ReplaceAll(buf, w.to))
 }
 
 // Given our request response, do the appropriate thing with it

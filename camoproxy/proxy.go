@@ -177,6 +177,10 @@ func (w *ReWriter) Write(buf []byte) (nw int, ew error) {
   if w.fold_condition.Match(buf) {
     return 0, nil
   }
+  return w.Flush()
+}
+
+func (w *ReWriter) Flush() (nw int, ew error) {
   return w.writer.Write(w.from.ReplaceAll(w.buf.Bytes(), w.to))
 }
 
@@ -209,7 +213,8 @@ func (p *Proxy) handleResponse(w http.ResponseWriter, resp *http.Response, surl 
       if err != nil {
         panic("Failed to create CSS ReWriter")
       }
-      return io.Copy(secure, resp.Body)
+      io.Copy(secure, resp.Body)
+      return secure.Flush()
     } else {
 			gologit.Debugln("Non-Image content-type returned", surl)
 			http.Error(w, "Non-Image content-type returned",

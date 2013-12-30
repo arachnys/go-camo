@@ -153,7 +153,7 @@ type ReWriter struct {
 
 // Creates a rewriter that will dutifully rewrite any occurences of
 // http:// with https:// in whatever is written to it
-func NewCSSReWriter(writer io.Writer) (w *ReWriter, err error) {
+func NewHttpReWriter(writer io.Writer) (w *ReWriter, err error) {
   from, err := regexp.Compile("http://")
   if err != nil {
     return nil, err
@@ -213,7 +213,7 @@ func (p *Proxy) handleResponse(w http.ResponseWriter, resp *http.Response, surl 
       return io.Copy(w, resp.Body)
     } else if content_type == "text/css" {
       // When we have CSS, make sure to rewrite `url(...)`s securely
-      secure, err := NewCSSReWriter(w)
+      secure, err := NewHttpReWriter(w)
       if err != nil {
         panic("Failed to create CSS ReWriter")
       }

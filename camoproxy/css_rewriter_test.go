@@ -9,7 +9,7 @@ import (
 func TestCSSReWriter(t *testing.T) {
   // Some setup...
   writer := bytes.NewBufferString("")
-  rewriter, _ := NewCSSReWriter(writer)
+  rewriter, _ := NewHttpReWriter(writer)
   // No rewrite, should flush immediately...
   not_http := []byte("htpp://")
   rewriter.Write(not_http)

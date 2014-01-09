@@ -7,6 +7,7 @@ import (
 	"github.com/cactus/go-camo/camoproxy/encoding"
 	"github.com/cactus/gologit"
 	"github.com/gorilla/mux"
+  "github.com/glenn-brown/golang-pkg-pcre/src/pkg/pcre"
 	"io"
 	"net"
   "bytes"
@@ -145,47 +146,44 @@ func (p *Proxy) TransformStream(w http.ResponseWriter, r io.Reader) (written int
 type ReWriter struct {
   writer io.Writer
   // flush me if you can
-  from regexp.Regexp
-  to []byte
-  fold_condition regexp.Regexp
-  buf bytes.Buffer
+  from *pcre.Regexp
+  to *string
+  buf *bytes.Buffer
+}
+
+func NewReWriter(writer io.Writer, find, replace string) (w *ReWriter, err error) {
+  from, reerr := pcre.Compile(find, 0)
+  if reerr != nil {
+    return nil, errors.New("Failed to compile find pattern")
+  }
+  rewriter := ReWriter{
+    writer: writer,
+    from: &from,
+    to: &replace,
+  }
+  return &rewriter, nil
 }
 
 // Creates a rewriter that will dutifully rewrite any occurences of
 // http:// with https:// in whatever is written to it
 func NewHttpReWriter(writer io.Writer) (w *ReWriter, err error) {
-  from, err := regexp.Compile("http://")
-  if err != nil {
-    return nil, err
-  }
-  // I'm sure there's a less messy way of doing this...
-  fold_condition, err := regexp.Compile("h(t(t(p(:(//?)?)?)?)?)?$")
-  if err != nil {
-    return nil, err
-  }
-  rewriter := ReWriter{
-    writer: writer,
-    from: *from,
-    to: []byte("https://"),
-    fold_condition: *fold_condition,
-  }
-  return &rewriter, nil
+  return NewReWriter(writer, "http://", "https://")
+}
+
+func NewImportReWriter(writer io.Writer) (w *ReWriter, err error) {
+  return NewReWriter(writer, "@import", "")
 }
 
 func (w *ReWriter) Write(buf []byte) (nw int, ew error) {
   w.buf.Write(buf)
-  // If we have a potential match on the fold, fill the buffer and wait
-  // for more data.
-  if w.fold_condition.Match(buf) {
-    return 0, nil
-  }
+  // TODO: Use pcre partial match to ensure we handle boundary condition
   return w.Flush()
 }
 
 func (w *ReWriter) Flush() (nw int, ew error) {
   buf := w.buf.Bytes()
   w.buf.Reset()
-  return w.writer.Write(w.from.ReplaceAll(buf, w.to))
+  return w.writer.Write(w.from.ReplaceAll(buf, []byte(*w.to), 0))
 }
 
 // Given our request response, do the appropriate thing with it

@@ -24,6 +24,15 @@ import (
 	"github.com/cactus/mlog"
 )
 
+var acceptedContentTypes = []string{
+	"application/font-woff",
+	"application/vnd.ms-fontobject",
+	"application/x-font",
+	"image/",
+	"text/css",
+}
+var defaultAcceptHeaders = "image/*, text/*, application/*"
+
 // Config holds configuration data used when creating a Proxy with New.
 type Config struct {
 	// HMACKey is a byte slice to be used as the hmac key
@@ -62,6 +71,15 @@ type Proxy struct {
 	metrics   ProxyMetrics
 	client    *http.Client
 	config    *Config
+}
+
+func isContentTypeAcceptable(contentType string) bool {
+	for _, prefix := range acceptedContentTypes {
+		if strings.HasPrefix(contentType, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func hexEncodeCSSURLs(baseURL *url.URL, hmacKey []byte, css []byte) ([]byte, error) {
@@ -255,7 +273,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// add an accept header if the client didn't send one
 	if nreq.Header.Get("Accept") == "" {
-		nreq.Header.Add("Accept", "image/*, text/css")
+		nreq.Header.Add("Accept", defaultAcceptHeaders)
 	}
 
 	nreq.Header.Add("User-Agent", p.config.ServerName)
@@ -304,10 +322,9 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch resp.StatusCode {
 	case 200:
 		// check content type
-		if !strings.HasPrefix(contentType, "image/") &&
-			!strings.HasPrefix(contentType, "text/css") {
-			mlog.Debugm("Non-Image or non-CSS content-type returned", mlog.Map{"type": u})
-			http.Error(w, "Non-Image or non-CSS content-type returned",
+		if !isContentTypeAcceptable(contentType) {
+			mlog.Debugm("Content-Type returned is not for a CSS, font or image", mlog.Map{"type": contentType})
+			http.Error(w, "Content-Type returned is not for a CSS, font or image",
 				http.StatusBadRequest)
 			return
 		}

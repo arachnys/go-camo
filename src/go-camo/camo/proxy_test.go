@@ -101,6 +101,23 @@ func TestSimpleValidCSSURL(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestValidFontURLs(t *testing.T) {
+	t.Parallel()
+
+	testURLs := []string{
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.eot?v=4.7.0",
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.svg?v=4.7.0#fontawesomeregular",
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.ttf?v=4.7.0",
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.woff2?v=4.7.0",
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.woff?v=4.7.0",
+	}
+
+	for _, testURL := range testURLs {
+		_, err := makeTestReq(testURL, 200)
+		assert.Nil(t, err)
+	}
+}
+
 func TestProtocolRelativeURL(t *testing.T) {
 	t.Parallel()
 	testURL := "//httpbin.org/get"

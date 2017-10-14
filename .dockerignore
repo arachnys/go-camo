@@ -15,3 +15,7 @@
 /server.crt
 /server.csr
 *.py[co]
+
+*.md
+*.yml
+.git

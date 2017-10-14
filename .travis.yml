@@ -1,8 +1,21 @@
+sudo: required
 language: go
-script: make setup test
-sudo: false
 go:
-    - 1.6
-    - 1.7
-    - 1.8
-    - 1.9
+  - 1.6
+  - 1.7
+  - 1.8
+  - 1.9
+services:
+  - docker
+install:
+  - make setup
+script:
+  - make test
+  - test -n "$TRAVIS_TAG" || make snapshot
+after_success:
+  - export BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  - export VCS_REF=$(git rev-parse --short HEAD)
+  - test -n "$TRAVIS_TAG" && docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+  - test -n "$TRAVIS_TAG" && make release
+notifications:
+  email: false

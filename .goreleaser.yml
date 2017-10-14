@@ -5,8 +5,6 @@ builds:
     ldflags: -s -w -X main.ServerVersion={{.Commit}}
     env:
       - CGO_ENABLED=0
-      - BUILD_DATE={{.Date}}
-      - VCS_REF={{.Commit}}
     goos:
       - darwin
       - linux

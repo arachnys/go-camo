@@ -22,7 +22,17 @@ go-camo
 
 This is [Arachnys'][17] version of [`go-camo`][18].
 
-In addition to proxying non-secure images over SSL/TLS, it also proxies fonts, stylesheets, and URLs in stylesheets.
+The fundamental value proposition remains the same as the original project.
+That is, to proxy non-secure images over SSL/TLS.
+
+There are however, some crucial changes, and improvements:
+
+- Support for proxying fonts, stylesheets, and URLs in stylesheets
+- Support for protocol-relative URLs / URLs without a scheme
+- Higher default timeout
+- Go's `dep` (and vanilla tooling) is used instead of `gb` for dependency management
+- `goreleaser` is used instead of `gb`, and the `Makefile` for building binaries
+- Support for Docker
 
 ---
 

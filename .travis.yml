@@ -1,5 +1,5 @@
 language: go
-script: make build-setup test
+script: make setup test
 sudo: false
 go:
     - 1.6

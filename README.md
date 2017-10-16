@@ -30,6 +30,8 @@ There are however, some crucial changes, and improvements:
 - Support for proxying fonts, stylesheets, and URLs in stylesheets
 - Support for protocol-relative URLs / URLs without a scheme
 - Higher default timeout
+- Sentry for crash reporting, and aggregation
+- End-to-end health check endpoint (`/health`)
 - Go's `dep` (and vanilla tooling) is used instead of `gb` for dependency management
 - `goreleaser` is used instead of `gb`, and the `Makefile` for building binaries
 - Support for Docker

@@ -5,7 +5,7 @@ CURRENT_DATE      := `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 BUILDDIR          := ${CURDIR}
 GOTEST_FLAGS      := -cpu=1,2
 
-TEST_PACKAGES          := `go list ./... | grep -v /vendor/`
+TEST_PACKAGES     := `go list ./... | grep -v /vendor/`
 
 define HELP_OUTPUT
 Available targets:

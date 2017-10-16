@@ -8,9 +8,21 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/certifi/gocertifi"
+  packages = ["."]
+  revision = "3fd9e1adb12b72d2f3f82191d49be9b93c69f67c"
+  version = "2017.07.27"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "5215b55f46b2b919f50a1df0eaa5886afe4e3b3d"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/getsentry/raven-go"
+  packages = ["."]
+  revision = "1452f6376ddb15c546b6d7567e1d9518765391b5"
 
 [[projects]]
   name = "github.com/jessevdk/go-flags"
@@ -30,6 +42,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ac9f3e19390c9964793d1ece1348d89caf13f3263945f95056a94becd30f323e"
+  inputs-digest = "5ec9b65c3b26e38f61c6971b8d247b4c8d566c3bb9bcf5d9d0fe30843c588e54"
   solver-name = "gps-cdcl"
   solver-version = 1

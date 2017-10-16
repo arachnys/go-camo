@@ -1,7 +1,7 @@
 go-camo
 =======
 
-[![Build Status](https://travis-ci.org/cactus/go-camo.png?branch=master)](https://travis-ci.org/cactus/go-camo)
+[![Build Status](https://travis-ci.org/arachnys/go-camo.png?branch=master)](https://travis-ci.org/arachnys/go-camo)
 
 ## Contents
 
@@ -34,7 +34,7 @@ There are however, some crucial changes, and improvements:
 - End-to-end health check endpoint (`/health`)
 - Go's `dep` (and vanilla tooling) is used instead of `gb` for dependency management
 - `goreleaser` is used instead of `gb`, and the `Makefile` for building binaries
-- Support for Docker
+- Support for [Docker][19] (`docker pull arachnysdocker/go-camo`)
 
 ---
 
@@ -128,13 +128,22 @@ Note that it is recommended to front Go-Camo with a CDN when possible.
 Download the tarball appropriate for your OS/ARCH from [releases][13].
 Extract, and copy files to desired locations.
 
+Alternatively, run it in Docker using:
+
+```
+docker run -it --rm -p 8080:8080 arachnysdocker/go-camo:<tag>
+```
+
+Set `<tag>` to a version in the [releases][13] or set it to `latest`.
+For stability, we do not recommend using `latest` as there may be breaking changes.
+
 ## Building
 
 Building requires:
 
 *   git
 *   make
-*   go (version 1.8 recommended)
+*   go (version 1.8+ recommended)
 
 Building:
 
@@ -191,7 +200,7 @@ In order to use this on Heroku with the provided Procfile, you need to:
 
 1.  Create an app specifying the https://github.com/kr/heroku-buildpack-go
     buildpack
-2.  Set `HMAC_KEY` to the key you are using
+2.  Set `GOCAMO_HMAC` to the key you are using
 
 ## Securing an installation
 
@@ -366,3 +375,4 @@ file for details.
 [16]: https://en.wikipedia.org/wiki/IPv6_address#Special_addresses
 [17]: https://www.arachnys.com/
 [18]: https://github.com/cactus/go-camo/
+[19]: https://www.docker.com/

@@ -97,8 +97,20 @@ func TestSimpleValidImageURL(t *testing.T) {
 func TestSimpleValidCSSURL(t *testing.T) {
 	t.Parallel()
 	testURL := "http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
-	_, err := makeTestReq(testURL, 200)
-	assert.Nil(t, err)
+	record, err := makeTestReq(testURL, 200)
+	if assert.Nil(t, err) {
+		assert.Contains(t, record.Body.String(), "body{margin:0}", "Expected response to contain valid, proxied CSS")
+	}
+}
+
+func TestURLsInCSS(t *testing.T) {
+	t.Parallel()
+	testURL := "https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.css"
+	record, err := makeTestReq(testURL, 200)
+	if assert.Nil(t, err) {
+		hexEncodedURL := encoding.HexEncodeURL(camoConfig.HMACKey, "https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.eot?v=4.7.0")
+		assert.Contains(t, record.Body.String(), hexEncodedURL, "Expected URLs in CSS to be hex encoded, and proxied")
+	}
 }
 
 func TestValidFontURLs(t *testing.T) {

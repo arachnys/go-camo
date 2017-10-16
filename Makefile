@@ -73,8 +73,8 @@ ci-success:
 	else \
 		make snapshot; \
 	fi
-	@if [ "${TRAVIS_BRANCH}" = "master" ]; then \
-		docker push arachnysdocker/go-camo; \
+	@if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ "${TRAVIS_BRANCH}" = "master" ]; then \
+		docker push arachnysdocker/go-camo:latest; \
 	fi
 
 ${BUILDDIR}/man/%: man/%.mdoc

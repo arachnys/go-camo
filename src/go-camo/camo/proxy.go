@@ -164,7 +164,7 @@ func writeCSSWithResolvedURLs(baseURL *url.URL, contentEncoding string, hmacKey 
 	case err := <-errChan:
 		return 0, err
 	case <-successChan:
-	case <-time.After(time.Second * 60):
+	case <-time.After(time.Second * 10):
 		return 0, errors.New("timeout waiting for gzip writer")
 	}
 

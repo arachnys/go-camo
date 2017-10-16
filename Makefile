@@ -39,7 +39,7 @@ clean-vendor:
 
 setup:
 	@go get -u github.com/golang/dep/cmd/dep
-	@ln -s $(pwd)/src/go-camo/ ${GOPATH}/src/
+	@ln -s ${BUILDDIR}/src/go-camo/ ${GOPATH}/src/go-camo
 
 generate:
 	@echo "Running generate..."

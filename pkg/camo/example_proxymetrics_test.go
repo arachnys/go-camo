@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 
-	"go-camo/camo"
-	"go-camo/stats"
+	"github.com/arachnys/go-camo/pkg/camo"
+	"github.com/arachnys/go-camo/pkg/stats"
 )
 
 func ExampleProxyMetrics() {

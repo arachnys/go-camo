@@ -8,7 +8,7 @@ package main
 
 const licenseText = `
 This software is available under the MIT License at:
-└── https://github.com/cactus/go-camo
+└── https://github.com/arachnys/go-camo
 
 Portions of this software utilize third party libraries:
 ├── https://github.com/cactus/mlog              (MIT License)

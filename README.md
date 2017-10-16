@@ -369,10 +369,10 @@ file for details.
 [10]: https://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security
 [11]: https://github.com/cactus/go-camo/issues/6
 [12]: https://codereview.appspot.com/151730045#msg10
-[13]: https://github.com/cactus/go-camo/releases
+[13]: https://github.com/arachnys/go-camo/releases
 [14]: https://github.com/cactus/static-server
 [15]: https://en.wikipedia.org/wiki/DNS_rebinding
 [16]: https://en.wikipedia.org/wiki/IPv6_address#Special_addresses
 [17]: https://www.arachnys.com/
-[18]: https://github.com/cactus/go-camo/
+[18]: https://github.com/arachnys/go-camo/
 [19]: https://www.docker.com/

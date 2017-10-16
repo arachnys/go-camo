@@ -1,5 +1,5 @@
 builds:
-  - main: ./src/go-camo/
+  - main: ./cmd/go-camo/
     binary: go-camo
     flags: -tags netgo
     ldflags: -s -w -X main.ServerVersion={{.Commit}}

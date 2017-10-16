@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"go-camo/camo/encoding"
+	"github.com/arachnys/go-camo/pkg/camo/encoding"
 
 	"github.com/cactus/mlog"
 )

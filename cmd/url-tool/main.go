@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"go-camo/camo/encoding"
+	"github.com/arachnys/go-camo/pkg/camo/encoding"
 
 	flags "github.com/jessevdk/go-flags"
 )

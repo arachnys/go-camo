@@ -29,18 +29,15 @@ help:
 	@echo "$$HELP_OUTPUT"
 
 clean:
-	@rm -rf "${BUILDDIR}/bin"
-	@rm -rf "${BUILDDIR}/pkg"
-	@rm -rf "${BUILDDIR}/tar"
+	@rm -rf "${BUILDDIR}/dist/"
 	@rm -rf "${BUILDDIR}/man/"*.[1-9]
 
 clean-vendor:
-	@rm -rf "${BUILDDIR}/vendor/src"
+	@rm -rf "${BUILDDIR}/vendor/"
 
 setup:
 	@go get -u github.com/golang/dep/cmd/dep
 	@go get -u github.com/goreleaser/goreleaser
-	@ln -s ${BUILDDIR}/src/go-camo/ ${GOPATH}/src/go-camo
 
 generate:
 	@echo "Running generate..."

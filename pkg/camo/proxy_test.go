@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"go-camo/camo/encoding"
-	"go-camo/router"
+	"github.com/arachnys/go-camo/pkg/camo/encoding"
+	"github.com/arachnys/go-camo/pkg/router"
 
 	"github.com/stretchr/testify/assert"
 )

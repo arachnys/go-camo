@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"go-camo/camo"
-	"go-camo/router"
-	"go-camo/stats"
+	"github.com/arachnys/go-camo/pkg/camo"
+	"github.com/arachnys/go-camo/pkg/router"
+	"github.com/arachnys/go-camo/pkg/stats"
 
 	"github.com/cactus/mlog"
 	"github.com/getsentry/raven-go"

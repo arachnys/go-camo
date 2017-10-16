@@ -39,6 +39,7 @@ clean-vendor:
 
 setup:
 	@go get -u github.com/golang/dep/cmd/dep
+	@go get -u github.com/goreleaser/goreleaser
 	@ln -s ${BUILDDIR}/src/go-camo/ ${GOPATH}/src/go-camo
 
 generate:

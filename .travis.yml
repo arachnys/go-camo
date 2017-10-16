@@ -9,13 +9,7 @@ install:
   - make setup
 script:
   - make test
-  - test -n "$TRAVIS_TAG" || make snapshot
 after_success:
-  - export BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  - export VCS_REF=$(git rev-parse --short HEAD)
-  - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-  - test -n "$TRAVIS_TAG" && make release
-  - if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" != "master" -o -n "$TRAVIS_TAG" ]; then exit 0; fi
-  - docker push arachnysdocker/go-camo
+  - make ci-success
 notifications:
   email: false

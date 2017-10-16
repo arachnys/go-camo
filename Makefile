@@ -23,7 +23,7 @@ Available targets:
 endef
 export HELP_OUTPUT
 
-.PHONY: help clean clean-vendor setup generate test cover snapshot release man all
+.PHONY: help clean clean-vendor setup generate test cover snapshot release ci-success man all
 
 help:
 	@echo "$$HELP_OUTPUT"
@@ -60,8 +60,22 @@ snapshot:
 	@goreleaser --rm-dist --skip-validate --snapshot
 
 release:
-	@echo "Releasing..."
+	@echo "Releasing (manually)..."
 	@goreleaser --rm-dist
+
+ci-success:
+	@echo "Building, and releasing..."
+	@export BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+	@export VCS_REF=$(git rev-parse --short HEAD)
+	@docker login -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"
+	@if [ -n "${TRAVIS_TAG}" ]; then \
+		make release; \
+	else \
+		make snapshot; \
+	fi
+	@if [ "${TRAVIS_BRANCH}" = "master" ]; then \
+		docker push arachnysdocker/go-camo; \
+	fi
 
 ${BUILDDIR}/man/%: man/%.mdoc
 	@cat $< | sed -E "s#.Os (.*) VERSION#.Os \1 ${APP_VER}#" > $@

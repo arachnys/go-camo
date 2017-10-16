@@ -34,6 +34,7 @@ There are however, some crucial changes, and improvements:
 - End-to-end health check endpoint (`/health`)
 - Go's `dep` (and vanilla tooling) is used instead of `gb` for dependency management
 - `goreleaser` is used instead of `gb`, and the `Makefile` for building binaries
+- Support for [termination signals][20]
 - Support for [Docker][19] (`docker pull arachnysdocker/go-camo`)
 
 ---
@@ -376,3 +377,4 @@ file for details.
 [17]: https://www.arachnys.com/
 [18]: https://github.com/arachnys/go-camo/
 [19]: https://www.docker.com/
+[20]: https://www.gnu.org/software/libc/manual/html_node/Termination-Signals.html

@@ -12,9 +12,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/arachnys/go-camo/pkg/camo"
@@ -34,6 +36,9 @@ var (
 )
 
 func main() {
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+
 	var gmx int
 	if gmxEnv := os.Getenv("GOMAXPROCS"); gmxEnv != "" {
 		gmx, _ = strconv.Atoi(gmxEnv)
@@ -206,7 +211,9 @@ func main() {
 		}()
 	}
 
-	// just block. listen and serve will exit the program if they fail/return
-	// so we just need to block to prevent main from exiting.
-	select {}
+	// Listen, and serve will exit the program if they fail / return.
+	// The program will exit if we do not block as we are running the HTTP,
+	// and HTTPS servers in separate Go routines.
+	// We need to block, and exit only when we receive termination signals.
+	<-done
 }

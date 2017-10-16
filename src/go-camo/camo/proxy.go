@@ -7,8 +7,11 @@
 package camo
 
 import (
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,6 +23,15 @@ import (
 
 	"github.com/cactus/mlog"
 )
+
+var acceptedContentTypes = []string{
+	"application/font-woff",
+	"application/vnd.ms-fontobject",
+	"application/x-font",
+	"image/",
+	"text/css",
+}
+var defaultAcceptHeaders = "image/*, text/*, application/*"
 
 // Config holds configuration data used when creating a Proxy with New.
 type Config struct {
@@ -61,6 +73,104 @@ type Proxy struct {
 	config    *Config
 }
 
+func isContentTypeAcceptable(contentType string) bool {
+	for _, prefix := range acceptedContentTypes {
+		if strings.HasPrefix(contentType, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func hexEncodeCSSURLs(baseURL *url.URL, hmacKey []byte, css []byte) ([]byte, error) {
+	re, err := regexp.Compile(`(?:url[\s]?)(?:\(['"]?)(.*?)(?:['"]?\))`)
+	if err != nil {
+		return nil, err
+	}
+
+	return re.ReplaceAllFunc(css, func(b []byte) []byte {
+		cssURL := re.FindSubmatch(b)[1]
+		if cssURL == nil {
+			return b
+		}
+
+		// Convert to absolute URL
+		u, err := url.Parse(string(cssURL))
+		if err != nil {
+			return b
+		}
+		u = baseURL.ResolveReference(u)
+
+		// Encode to proxy URL
+		hexURL := encoding.HexEncodeURL(hmacKey, u.String())
+		return bytes.Replace(b, cssURL, []byte(hexURL), -1)
+	}), nil
+}
+
+func writeCSSWithResolvedURLs(baseURL *url.URL, contentEncoding string, hmacKey []byte, w io.Writer, r io.ReadCloser) (int64, error) {
+	var err error
+	if contentEncoding == "gzip" {
+		r, err = gzip.NewReader(r)
+		if r != nil {
+			defer r.Close()
+		}
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	css, err := ioutil.ReadAll(r)
+	if err != nil {
+		return 0, err
+	}
+
+	resolvedCSS, err := hexEncodeCSSURLs(baseURL, hmacKey, css)
+	if err != nil {
+		return 0, err
+	}
+
+	errChan := make(chan error)
+	successChan := make(chan bool)
+
+	var pr io.Reader
+
+	if contentEncoding == "gzip" {
+		var pw io.WriteCloser
+		pr, pw = io.Pipe()
+
+		go func() {
+			defer pw.Close()
+
+			gz := gzip.NewWriter(pw)
+			if gz != nil {
+				defer gz.Close()
+			}
+			if _, err := gz.Write(resolvedCSS); err != nil {
+				errChan <- err
+			}
+			close(successChan)
+		}()
+	} else {
+		pr = bytes.NewReader(resolvedCSS)
+		close(successChan)
+	}
+
+	n, err := io.Copy(w, pr)
+	if err != nil {
+		return 0, err
+	}
+
+	select {
+	case err := <-errChan:
+		return 0, err
+	case <-successChan:
+	case <-time.After(time.Second * 10):
+		return 0, errors.New("timeout waiting for gzip writer")
+	}
+
+	return n, nil
+}
+
 // ServerHTTP handles the client request, validates the request is validly
 // HMAC signed, filters based on the Allow list, and then proxies
 // valid requests to the desired endpoint. Responses are filtered for
@@ -98,6 +208,12 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	mlog.Debugm("signed client url", mlog.Map{"url": sURL})
 
 	u, err := url.Parse(sURL)
+
+	if u.Scheme == "" {
+		// Handle protocol-relative URLs
+		u.Scheme = "https"
+	}
+
 	if err != nil {
 		mlog.Debugm("url parse error", mlog.Map{"err": err})
 		http.Error(w, "Bad url", http.StatusBadRequest)
@@ -135,7 +251,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	nreq, err := http.NewRequest(req.Method, sURL, nil)
+	nreq, err := http.NewRequest(req.Method, u.String(), nil)
 	if err != nil {
 		mlog.Debugm("could not create NewRequest", mlog.Map{"err": err})
 		http.Error(w, "Error Fetching Resource", http.StatusBadGateway)
@@ -157,7 +273,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// add an accept header if the client didn't send one
 	if nreq.Header.Get("Accept") == "" {
-		nreq.Header.Add("Accept", "image/*")
+		nreq.Header.Add("Accept", defaultAcceptHeaders)
 	}
 
 	nreq.Header.Add("User-Agent", p.config.ServerName)
@@ -201,12 +317,14 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	contentType := resp.Header.Get("Content-Type")
+
 	switch resp.StatusCode {
 	case 200:
 		// check content type
-		if !strings.HasPrefix(resp.Header.Get("Content-Type"), "image/") {
-			mlog.Debugm("Non-Image content-type returned", mlog.Map{"type": u})
-			http.Error(w, "Non-Image content-type returned",
+		if !isContentTypeAcceptable(contentType) {
+			mlog.Debugm("Content-Type returned is not for a CSS, font or image", mlog.Map{"type": contentType})
+			http.Error(w, "Content-Type returned is not for a CSS, font or image",
 				http.StatusBadRequest)
 			return
 		}
@@ -239,10 +357,16 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	p.copyHeader(&h, &resp.Header, &ValidRespHeaders)
 	w.WriteHeader(resp.StatusCode)
 
-	// since this uses io.Copy from the respBody, it is streaming
-	// from the request to the response. This means it will nearly
-	// always end up with a chunked response.
-	bW, err := io.Copy(w, resp.Body)
+	var bW int64
+	if strings.HasPrefix(contentType, "text/css") {
+		bW, err = writeCSSWithResolvedURLs(u, resp.Header.Get("Content-Encoding"), p.config.HMACKey, w, resp.Body)
+	} else {
+		// since this uses io.Copy from the respBody, it is streaming
+		// from the request to the response. This means it will nearly
+		// always end up with a chunked response.
+		bW, err = io.Copy(w, resp.Body)
+	}
+
 	if err != nil {
 		// only log broken pipe errors at debug level
 		if isBrokenPipe(err) {

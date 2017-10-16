@@ -94,6 +94,49 @@ func TestSimpleValidImageURL(t *testing.T) {
 	}
 }
 
+func TestSimpleValidCSSURL(t *testing.T) {
+	t.Parallel()
+	testURL := "http://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+	record, err := makeTestReq(testURL, 200)
+	if assert.Nil(t, err) {
+		assert.Contains(t, record.Body.String(), "body{margin:0}", "Expected response to contain valid, proxied CSS")
+	}
+}
+
+func TestURLsInCSS(t *testing.T) {
+	t.Parallel()
+	testURL := "https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.css"
+	record, err := makeTestReq(testURL, 200)
+	if assert.Nil(t, err) {
+		hexEncodedURL := encoding.HexEncodeURL(camoConfig.HMACKey, "https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.eot?v=4.7.0")
+		assert.Contains(t, record.Body.String(), hexEncodedURL, "Expected URLs in CSS to be hex encoded, and proxied")
+	}
+}
+
+func TestValidFontURLs(t *testing.T) {
+	t.Parallel()
+
+	testURLs := []string{
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.eot?v=4.7.0",
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.svg?v=4.7.0#fontawesomeregular",
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.ttf?v=4.7.0",
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.woff2?v=4.7.0",
+		"http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/fonts/fontawesome-webfont.woff?v=4.7.0",
+	}
+
+	for _, testURL := range testURLs {
+		_, err := makeTestReq(testURL, 200)
+		assert.Nil(t, err)
+	}
+}
+
+func TestProtocolRelativeURL(t *testing.T) {
+	t.Parallel()
+	testURL := "//httpbin.org/get"
+	_, err := makeTestReq(testURL, 400)
+	assert.Nil(t, err)
+}
+
 func TestGoogleChartURL(t *testing.T) {
 	t.Parallel()
 	testURL := "http://chart.apis.google.com/chart?chs=920x200&chxl=0:%7C2010-08-13%7C2010-09-12%7C2010-10-12%7C2010-11-11%7C1:%7C0%7C0%7C0%7C0%7C0%7C0&chm=B,EBF5FB,0,0,0&chco=008Cd6&chls=3,1,0&chg=8.3,20,1,4&chd=s:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&chxt=x,y&cht=lc"

@@ -1,0 +1,16 @@
+builds:
+  - main: ./src/go-camo/
+    binary: go-camo
+    flags: -tags netgo
+    ldflags: -s -w -X main.ServerVersion={{.Commit}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+dockers:
+  - image: arachnysdocker/go-camo
+    latest: true

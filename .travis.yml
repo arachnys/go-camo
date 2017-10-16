@@ -1,8 +1,15 @@
+sudo: required
 language: go
-script: make build-setup test
-sudo: false
 go:
-    - 1.6
-    - 1.7
-    - 1.8
-    - 1.9
+  - 1.8
+  - 1.9
+services:
+  - docker
+install:
+  - make setup
+script:
+  - make test
+after_success:
+  - make ci-success
+notifications:
+  email: false

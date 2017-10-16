@@ -1,34 +1,29 @@
+APP_VER           := $(shell git describe --always --dirty --tags|sed 's/^v//')
+LATEST_COMMIT     := `git rev-parse --short HEAD`
+CURRENT_DATE      := `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
 BUILDDIR          := ${CURDIR}
-TARBUILDDIR       := ${BUILDDIR}/tar
-ARCH              := $(shell go env GOHOSTARCH)
-OS                := $(shell go env GOHOSTOS)
-GOVER             := $(shell go version | awk '{print $$3}' | tr -d '.')
-APP_NAME          := go-camo
-APP_VER           := $(shell git describe --always --dirty --tags|sed 's/^v//')
-VERSION_VAR       := main.ServerVersion
 GOTEST_FLAGS      := -cpu=1,2
-GOBUILD_DEPFLAGS  := -tags netgo
-GOBUILD_LDFLAGS   ?= -s -w
-GOBUILD_FLAGS     := ${GOBUILD_DEPFLAGS} -ldflags "${GOBUILD_LDFLAGS} -X ${VERSION_VAR}=${APP_VER}"
-GB                := gb
+
+TEST_PACKAGES     := `go list ./... | grep -v /vendor/`
 
 define HELP_OUTPUT
 Available targets:
   help                this help
   clean               clean up
-  all                 build binaries and man pages
+  clean-vendor        remove vendor sources
+  setup               fetch dependencies
+  generate            run `go generate`
   test                run tests
   cover               run tests with cover output
-  build-setup         fetch dependencies
-  build               build all binaries
+  snapshot            creates a release snapshot
+  release             release the latest tag
   man                 build all man pages
-  tar                 build release tarball
-  cross-tar           cross compile and build release tarballs
+  all                 run `go generate` and build all man pages
 endef
 export HELP_OUTPUT
 
-.PHONY: help clean build test cover man man-copy all tar cross-tar
+.PHONY: help clean clean-vendor setup generate test cover snapshot release ci-success man all
 
 help:
 	@echo "$$HELP_OUTPUT"
@@ -42,63 +37,49 @@ clean:
 clean-vendor:
 	@rm -rf "${BUILDDIR}/vendor/src"
 
-build-setup:
-	@go get github.com/constabulary/gb/...
-	@${GB} vendor restore
-
-build:
-	@echo "Building..."
-	@${GB} build ${GOBUILD_FLAGS} ...
-
-test:
-	@echo "Running tests..."
-	@${GB} test ${GOTEST_FLAGS} ...
+setup:
+	@go get -u github.com/golang/dep/cmd/dep
+	@go get -u github.com/goreleaser/goreleaser
+	@ln -s ${BUILDDIR}/src/go-camo/ ${GOPATH}/src/go-camo
 
 generate:
 	@echo "Running generate..."
-	@${GB} generate
+	@go generate ./...
+
+test:
+	@echo "Running tests..."
+	@dep ensure
+	@go test ${GOTEST_FLAGS} ${TEST_PACKAGES} -v
 
 cover:
 	@echo "Running tests with coverage..."
-	@${GB} test -cover ${GOTEST_FLAGS} ...
+	@go test -cover ${GOTEST_FLAGS} ${TEST_PACKAGES}
+
+snapshot:
+	@echo "Creating release snapshot (no validation or publishing)..."
+	@goreleaser --rm-dist --skip-validate --snapshot
+
+release:
+	@echo "Releasing (manually)..."
+	@goreleaser --rm-dist
+
+ci-success:
+	@echo "Building, and releasing..."
+	@export BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+	@export VCS_REF=$(git rev-parse --short HEAD)
+	@docker login -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"
+	@if [ -n "${TRAVIS_TAG}" ]; then \
+		make release; \
+	else \
+		make snapshot; \
+	fi
+	@if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ "${TRAVIS_BRANCH}" = "master" ]; then \
+		docker push arachnysdocker/go-camo:latest; \
+	fi
 
 ${BUILDDIR}/man/%: man/%.mdoc
 	@cat $< | sed -E "s#.Os (.*) VERSION#.Os \1 ${APP_VER}#" > $@
 
 man: $(patsubst man/%.mdoc,${BUILDDIR}/man/%,$(wildcard man/*.1.mdoc))
 
-tar: all
-	@echo "Building tar..."
-	@mkdir -p ${TARBUILDDIR}/${APP_NAME}-${APP_VER}/bin
-	@mkdir -p ${TARBUILDDIR}/${APP_NAME}-${APP_VER}/man
-	@cp ${BUILDDIR}/bin/${APP_NAME}-netgo ${TARBUILDDIR}/${APP_NAME}-${APP_VER}/bin/${APP_NAME}
-	@cp ${BUILDDIR}/bin/url-tool-netgo ${TARBUILDDIR}/${APP_NAME}-${APP_VER}/bin/url-tool
-	@cp ${BUILDDIR}/man/*.[1-9] ${TARBUILDDIR}/${APP_NAME}-${APP_VER}/man/
-	@tar -C ${TARBUILDDIR} -czf ${TARBUILDDIR}/${APP_NAME}-${APP_VER}.${GOVER}.${OS}-${ARCH}.tar.gz ${APP_NAME}-${APP_VER}
-
-cross-tar: man
-	@echo "Making tar for ${APP_NAME}:darwin.amd64"
-	@env GOOS=darwin  GOARCH=amd64 ${GB} build ${GOBUILD_FLAGS} ...
-	@env GOOS=freebsd GOARCH=amd64 ${GB} build ${GOBUILD_FLAGS} ...
-	@env GOOS=linux   GOARCH=amd64 ${GB} build ${GOBUILD_FLAGS} ...
-
-	@(for x in darwin-amd64 freebsd-amd64 linux-amd64; do \
-		echo "Making tar for ${APP_NAME}.$${x}"; \
-		XDIR="${GOVER}.$${x}"; \
-		mkdir -p ${TARBUILDDIR}/$${XDIR}/${APP_NAME}-${APP_VER}/bin/; \
-		mkdir -p ${TARBUILDDIR}/$${XDIR}/${APP_NAME}-${APP_VER}/man/; \
-		cp bin/${APP_NAME}-$${x}-netgo ${TARBUILDDIR}/$${XDIR}/${APP_NAME}-${APP_VER}/bin/${APP_NAME}; \
-		cp bin/url-tool-$${x}-netgo ${TARBUILDDIR}/$${XDIR}/${APP_NAME}-${APP_VER}/bin/url-tool; \
-		cp ${BUILDDIR}/man/*.[1-9] ${TARBUILDDIR}/$${XDIR}/${APP_NAME}-${APP_VER}/man/; \
-		tar -C ${TARBUILDDIR}/$${XDIR} -czf ${TARBUILDDIR}/${APP_NAME}-${APP_VER}.$${XDIR}.tar.gz ${APP_NAME}-${APP_VER}; \
-	done)
-
-release-sign:
-	@echo "signing release tarballs"
-	@(cd tar; shasum -a 256 go-camo-*.tar.gz > SHA256; \
-	  signify -S -s $${SECKEY} -m SHA256; \
-	  sed -i.bak -E 's#^(.*:).*#\1 go-camo-${APP_VER} SHA256#' SHA256.sig; \
-	  rm -f SHA256.sig.bak; \
-	 )
-
-all: build man
+all: generate man

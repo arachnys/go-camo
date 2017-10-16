@@ -22,6 +22,7 @@ import (
 	"go-camo/stats"
 
 	"github.com/cactus/mlog"
+	"github.com/getsentry/raven-go"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -46,10 +47,11 @@ func main() {
 		HMACKey             string        `short:"k" long:"key" description:"HMAC key"`
 		AddHeaders          []string      `short:"H" long:"header" description:"Extra header to return for each response. This option can be used multiple times to add multiple headers"`
 		Stats               bool          `long:"stats" description:"Enable Stats"`
+		SentryDSN           string        `long:"sentry-dsn" description:"Client key for Sentry crash reporting (ignore to disable)"`
 		NoLogTS             bool          `long:"no-log-ts" description:"Do not add a timestamp to logging"`
 		AllowList           string        `long:"allow-list" description:"Text file of hostname allow regexes (one per line)"`
 		MaxSize             int64         `long:"max-size" default:"5120" description:"Max response image size (KB)"`
-		ReqTimeout          time.Duration `long:"timeout" default:"4s" description:"Upstream request timeout"`
+		ReqTimeout          time.Duration `long:"timeout" default:"5s" description:"Upstream request timeout"`
 		MaxRedirects        int           `long:"max-redirects" default:"3" description:"Maximum number of redirects to follow"`
 		DisableKeepAlivesFE bool          `long:"no-fk" description:"Disable frontend http keep-alive support"`
 		DisableKeepAlivesBE bool          `long:"no-bk" description:"Disable backend http keep-alive support"`
@@ -83,6 +85,9 @@ func main() {
 	// start out with a very bare logger that only prints
 	// the message (no special format or log elements)
 	mlog.SetFlags(0)
+
+	// Sentry
+	raven.SetDSN(opts.SentryDSN)
 
 	config := camo.Config{}
 	if hmacKey := os.Getenv("GOCAMO_HMAC"); hmacKey != "" {
@@ -179,7 +184,8 @@ func main() {
 		dumbrouter.StatsHandler = stats.Handler(ps)
 	}
 
-	http.Handle("/", dumbrouter)
+	handler := http.HandlerFunc(raven.RecoveryHandler(dumbrouter.ServeHTTP))
+	http.Handle("/", handler)
 
 	if opts.BindAddress != "" {
 		mlog.Printf("Starting server on: %s", opts.BindAddress)

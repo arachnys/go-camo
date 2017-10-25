@@ -207,6 +207,11 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	mlog.Debugm("signed client url", mlog.Map{"url": sURL})
 
+	// Handle data URI by redirecting to it
+	if strings.HasPrefix(sURL, "data:") {
+		http.Redirect(w, req, sURL, http.StatusMovedPermanently)
+	}
+
 	u, err := url.Parse(sURL)
 
 	if u.Scheme == "" {

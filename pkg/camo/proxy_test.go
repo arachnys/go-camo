@@ -130,6 +130,24 @@ func TestValidFontURLs(t *testing.T) {
 	}
 }
 
+func TestDataURIs(t *testing.T) {
+	t.Parallel()
+
+	testURIs := []string{
+		"data:image/gif;base64,R0lGODlhEAAQAMQAAORHHOVSKudfOulrSOp3WOyDZu6QdvCchPGolfO0o/XBs/fNwfjZ0frl3/zy7////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAkAABAALAAAAAAQABAAAAVVICSOZGlCQAosJ6mu7fiyZeKqNKToQGDsM8hBADgUXoGAiqhSvp5QAnQKGIgUhwFUYLCVDFCrKUE1lBavAViFIDlTImbKC5Gm2hB0SlBCBMQiB0UjIQA7",
+		"data:text/css,html,body{margin:0;padding:0}",
+	}
+
+	for _, testURI := range testURIs {
+		record, err := makeTestReq(testURI, 301)
+		assert.Nil(t, err)
+
+		if assert.Nil(t, err) {
+			assert.Contains(t, record.Body.String(), "data:", "Expected data URIs to be redirected")
+		}
+	}
+}
+
 func TestProtocolRelativeURL(t *testing.T) {
 	t.Parallel()
 	testURL := "//httpbin.org/get"

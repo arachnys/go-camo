@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/arachnys/go-camo/pkg/camo"
+	"github.com/arachnys/go-camo/pkg/healthcheck"
 	"github.com/arachnys/go-camo/pkg/router"
 	"github.com/arachnys/go-camo/pkg/stats"
 
@@ -50,8 +51,9 @@ func main() {
 	// command line flags
 	var opts struct {
 		HMACKey             string        `short:"k" long:"key" description:"HMAC key"`
+		TestURL             string        `long:"test-url" description:"Enable health check endpoint, and use the test URL for proxying, and checking the health of the service"`
 		AddHeaders          []string      `short:"H" long:"header" description:"Extra header to return for each response. This option can be used multiple times to add multiple headers"`
-		Stats               bool          `long:"stats" description:"Enable Stats"`
+		Stats               bool          `long:"stats" description:"Enable stats collection, and endpoint"`
 		SentryDSN           string        `long:"sentry-dsn" description:"Client key for Sentry crash reporting (ignore to disable)"`
 		NoLogTS             bool          `long:"no-log-ts" description:"Do not add a timestamp to logging"`
 		AllowList           string        `long:"allow-list" description:"Text file of hostname allow regexes (one per line)"`
@@ -185,8 +187,21 @@ func main() {
 	if opts.Stats {
 		ps := &stats.ProxyStats{}
 		proxy.SetMetricsCollector(ps)
-		mlog.Printf("Enabling stats at /status")
+		mlog.Printf("Enabling stats endpoint at /status")
 		dumbrouter.StatsHandler = stats.Handler(ps)
+	}
+
+	if opts.TestURL != "" {
+		instanceAddress := opts.BindAddress
+		if instanceAddress == "" {
+			instanceAddress = opts.BindAddressSSL
+		}
+		hc, err := healthcheck.New(instanceAddress, opts.TestURL, config.HMACKey)
+		if err != nil {
+			mlog.Fatalf("failed to initialise health check endpoint: %+v", err)
+		}
+		mlog.Printf("Enabling health check endpoint at /health")
+		dumbrouter.HealthCheckHandler = healthcheck.Handler(hc)
 	}
 
 	handler := http.HandlerFunc(raven.RecoveryHandler(dumbrouter.ServeHTTP))

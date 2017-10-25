@@ -12,10 +12,11 @@ import (
 
 // DumbRouter is a basic, special purpose, http router
 type DumbRouter struct {
-	ServerName   string
-	CamoHandler  http.Handler
-	StatsHandler http.HandlerFunc
-	AddHeaders   map[string]string
+	ServerName         string
+	CamoHandler        http.Handler
+	StatsHandler       http.HandlerFunc
+	HealthCheckHandler http.HandlerFunc
+	AddHeaders         map[string]string
 }
 
 // SetHeaders sets the headers on the response
@@ -52,6 +53,11 @@ func (dr *DumbRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if dr.StatsHandler != nil && r.URL.Path == "/status" {
 		dr.StatsHandler(w, r)
+		return
+	}
+
+	if dr.HealthCheckHandler != nil && r.URL.Path == "/health" {
+		dr.HealthCheckHandler(w, r)
 		return
 	}
 

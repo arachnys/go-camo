@@ -133,18 +133,25 @@ func TestValidFontURLs(t *testing.T) {
 func TestDataURIs(t *testing.T) {
 	t.Parallel()
 
-	testURIs := []string{
+	testAcceptableURIs := []string{
 		"data:image/gif;base64,R0lGODlhEAAQAMQAAORHHOVSKudfOulrSOp3WOyDZu6QdvCchPGolfO0o/XBs/fNwfjZ0frl3/zy7////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAkAABAALAAAAAAQABAAAAVVICSOZGlCQAosJ6mu7fiyZeKqNKToQGDsM8hBADgUXoGAiqhSvp5QAnQKGIgUhwFUYLCVDFCrKUE1lBavAViFIDlTImbKC5Gm2hB0SlBCBMQiB0UjIQA7",
 		"data:text/css,html,body{margin:0;padding:0}",
 	}
 
-	for _, testURI := range testURIs {
-		record, err := makeTestReq(testURI, 301)
+	for _, testURI := range testAcceptableURIs {
+		_, err := makeTestReq(testURI, 200)
 		assert.Nil(t, err)
+	}
 
-		if assert.Nil(t, err) {
-			assert.Contains(t, record.Body.String(), "data:", "Expected data URIs to be redirected")
-		}
+	testUnacceptableURIs := []string{
+		"data:,Hello%2C%20World!",
+		"data:text/plain;base64,SGVsbG8sIFdvcmxkIQ%3D%3D",
+		"data:text/html,<script>alert('hi');</script>",
+	}
+
+	for _, testURI := range testUnacceptableURIs {
+		_, err := makeTestReq(testURI, 400)
+		assert.Nil(t, err)
 	}
 }
 

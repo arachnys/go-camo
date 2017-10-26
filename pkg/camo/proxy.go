@@ -9,6 +9,7 @@ package camo
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -171,14 +172,43 @@ func writeCSSWithResolvedURLs(baseURL *url.URL, contentEncoding string, hmacKey 
 	return n, nil
 }
 
+func parseDataURI(dataURI string) ([]byte, string, error) {
+	re, err := regexp.Compile(`data:(.*),(.+)`)
+	if err != nil {
+		return nil, "", err
+	}
+
+	group := re.FindStringSubmatch(dataURI)
+	contentType := group[1]
+	rawData := group[2]
+
+	data := []byte(rawData)
+	if strings.HasSuffix(contentType, ";base64") {
+		data, err = base64.StdEncoding.DecodeString(rawData)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
+	return data, strings.TrimSuffix(contentType, ";base64"), nil
+}
+
 // ServerHTTP handles the client request, validates the request is validly
 // HMAC signed, filters based on the Allow list, and then proxies
 // valid requests to the desired endpoint. Responses are filtered for
 // proper image content types.
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	var bW int64
 	if p.metrics != nil {
 		p.metrics.AddServed()
+		defer func() {
+			p.metrics.AddBytes(bW)
+		}()
 	}
+
+	defer func() {
+		mlog.Debugm("response to client", mlog.Map{"resp": w})
+	}()
 
 	if p.config.DisableKeepAlivesFE {
 		w.Header().Set("Connection", "close")
@@ -207,9 +237,34 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	mlog.Debugm("signed client url", mlog.Map{"url": sURL})
 
-	// Handle data URI by redirecting to it
+	// Handle data URI
 	if strings.HasPrefix(sURL, "data:") {
-		http.Redirect(w, req, sURL, http.StatusMovedPermanently)
+		mlog.Debug("data uri detected")
+
+		data, contentType, err := parseDataURI(sURL)
+		if err != nil {
+			mlog.Debugm("data uri parse error", mlog.Map{"err": err})
+			http.Error(w, "Bad data uri", http.StatusBadRequest)
+			return
+		}
+
+		if !isContentTypeAcceptable(contentType) {
+			mlog.Debugm("Content-Type returned is not for a CSS, font or image", mlog.Map{"type": contentType})
+			http.Error(w, "Content-Type returned is not for a CSS, font or image",
+				http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", contentType)
+		w.WriteHeader(http.StatusOK)
+
+		n, err := w.Write(data)
+		bW = int64(n)
+		if err != nil && !isBrokenPipe(err) {
+			mlog.Printm("error writing response", mlog.Map{"err": err})
+		}
+
+		return
 	}
 
 	u, err := url.Parse(sURL)
@@ -362,7 +417,6 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	p.copyHeader(&h, &resp.Header, &ValidRespHeaders)
 	w.WriteHeader(resp.StatusCode)
 
-	var bW int64
 	if strings.HasPrefix(contentType, "text/css") {
 		bW, err = writeCSSWithResolvedURLs(u, resp.Header.Get("Content-Encoding"), p.config.HMACKey, w, resp.Body)
 	} else {
@@ -381,17 +435,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			mlog.Printm("error writing response", mlog.Map{"err": err})
 		}
 
-		// we may have written some bytes before the error
-		if p.metrics != nil && bW != 0 {
-			p.metrics.AddBytes(bW)
-		}
 		return
 	}
-
-	if p.metrics != nil {
-		p.metrics.AddBytes(bW)
-	}
-	mlog.Debugm("response to client", mlog.Map{"resp": w})
 }
 
 // copy headers from src into dst
@@ -453,7 +498,7 @@ func New(pc Config) (*Proxy, error) {
 	}
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		if len(via) >= pc.MaxRedirects {
-			return errors.New("Too many redirects")
+			return errors.New("too many redirects")
 		}
 		return nil
 	}

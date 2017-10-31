@@ -37,9 +37,11 @@ func New(instanceAddress, testURL string, hmacKey []byte) (*HealthCheck, error) 
 func Handler(hc *HealthCheck) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		res, err := http.Get(hc.CheckURL.String())
-		if res.Body != nil {
+
+		if err == nil {
 			defer res.Body.Close()
 		}
+
 		if err != nil || res.StatusCode < 200 || res.StatusCode >= 300 {
 			errorMsg := fmt.Sprintf("failed to load test url: %s (%d)", hc.CheckURL, res.StatusCode)
 			http.Error(w, errorMsg, http.StatusInternalServerError)

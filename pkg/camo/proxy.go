@@ -261,7 +261,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		n, err := w.Write(data)
 		bW = int64(n)
 		if err != nil && !isBrokenPipe(err) {
-			mlog.Printm("error writing response", mlog.Map{"err": err})
+			mlog.Printm("error writing data URI response", mlog.Map{"err": err})
 		}
 
 		return
@@ -427,7 +427,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		// only log broken pipe errors at debug level
 		if isBrokenPipe(err) {
-			mlog.Debugm("error writing response", mlog.Map{"err": err})
+			mlog.Debugm("error writing response (broken pipe)", mlog.Map{"err": err})
 		} else {
 			// unknown error and not a broken pipe
 			mlog.Printm("error writing response", mlog.Map{"err": err})

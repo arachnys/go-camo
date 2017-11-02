@@ -72,6 +72,7 @@ ci-success:
 	fi
 	@if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ "${TRAVIS_BRANCH}" = "master" ]; then \
 		docker push arachnysdocker/go-camo:latest; \
+		docker push arachnysdocker/go-camo-url-tool:latest; \
 	fi
 
 ${BUILDDIR}/man/%: man/%.mdoc

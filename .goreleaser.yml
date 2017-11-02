@@ -11,6 +11,30 @@ builds:
       - windows
     goarch:
       - amd64
+  - main: ./cmd/url-tool/
+    binary: go-camo-url-tool
+    flags: -tags netgo
+    ldflags: -s -w -X main.ServerVersion={{.Commit}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
 dockers:
   - image: arachnysdocker/go-camo
+    dockerfile: Dockerfile
     latest: true
+    binary: go-camo
+    goos: linux
+    goarch: amd64
+    goarm: ''
+  - image: arachnysdocker/go-camo-url-tool
+    dockerfile: Dockerfile.url-tool
+    latest: true
+    binary: go-camo-url-tool
+    goos: linux
+    goarch: amd64
+    goarm: ''

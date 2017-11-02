@@ -133,11 +133,16 @@ Extract, and copy files to desired locations.
 Alternatively, run it in Docker using:
 
 ```
-docker run -it --rm -p 8080:8080 arachnysdocker/go-camo:<tag>
+# Server
+docker run -t --rm -p 8080:8080 arachnysdocker/go-camo:<tag> -k <hmac key>
+
+# URL tool
+docker run -t --rm arachnysdocker/go-camo-url-tool:<tag> -k <hmac key>
 ```
 
 Set `<tag>` to a version in the [releases][13] or set it to `latest`.
 For stability, we do not recommend using `latest` as there may be breaking changes.
+Use a [tagged release][21].
 
 ## Building
 
@@ -379,3 +384,4 @@ file for details.
 [18]: https://github.com/arachnys/go-camo/
 [19]: https://www.docker.com/
 [20]: https://www.gnu.org/software/libc/manual/html_node/Termination-Signals.html
+[21]: https://github.com/arachnys/go-camo/releases

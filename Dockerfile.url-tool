@@ -1,0 +1,14 @@
+FROM alpine:3.6
+
+ARG BUILD_DATE
+ARG VCS_REF
+LABEL org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.vcs-url="https://www.github.com/arachnys/go-camo" \
+      org.label-schema.docker.cmd="docker run --rm -p 8080:8080 arachnysdocker/go-camo-url-tool -k <hmac key> (encode|decode) <url>" \
+      maintainer="Arachnys <techteam@arachnys.com>"
+
+RUN apk add --no-cache ca-certificates
+
+COPY go-camo-url-tool /
+ENTRYPOINT ["/go-camo-url-tool"]

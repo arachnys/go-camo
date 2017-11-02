@@ -8,6 +8,17 @@ import (
 	"regexp"
 )
 
+var acceptedContentTypes = []string{
+	"application/font-woff",
+	"application/vnd.ms-fontobject",
+	"application/x-font",
+	"font/",
+	"image/",
+	"text/css",
+}
+
+var defaultAcceptHeaders = "image/*, font/*, text/*, application/*"
+
 // ValidReqHeaders are http request headers that are acceptable to pass from
 // the client to the remote server. Only those present and true, are forwarded.
 // Empty implies no filtering.

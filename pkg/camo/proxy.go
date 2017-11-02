@@ -25,15 +25,6 @@ import (
 	"github.com/cactus/mlog"
 )
 
-var acceptedContentTypes = []string{
-	"application/font-woff",
-	"application/vnd.ms-fontobject",
-	"application/x-font",
-	"image/",
-	"text/css",
-}
-var defaultAcceptHeaders = "image/*, text/*, application/*"
-
 // Config holds configuration data used when creating a Proxy with New.
 type Config struct {
 	// HMACKey is a byte slice to be used as the hmac key

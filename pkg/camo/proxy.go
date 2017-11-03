@@ -9,6 +9,7 @@ package camo
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"io"
@@ -45,6 +46,8 @@ type Config struct {
 	// Keepalive enable/disable
 	DisableKeepAlivesFE bool
 	DisableKeepAlivesBE bool
+	// Skip verification of a server's certificate chain, and host name
+	SkipTLSVerify bool
 }
 
 // ProxyMetrics interface for Proxy to use for stats/metrics.
@@ -461,6 +464,7 @@ func New(pc Config) (*Proxy, error) {
 			Timeout:   3 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}).Dial,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: pc.SkipTLSVerify},
 		TLSHandshakeTimeout: 3 * time.Second,
 		MaxIdleConnsPerHost: 8,
 		DisableKeepAlives:   pc.DisableKeepAlivesBE,

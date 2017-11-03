@@ -35,7 +35,7 @@ There are however, some crucial changes, and improvements:
 - End-to-end health check endpoint (`/health`)
 - Go's `dep` (and vanilla tooling) is used instead of `gb` for dependency management
 - `goreleaser` is used instead of `gb`, and the `Makefile` for building binaries
-- Support for [termination signals][20]
+- Support for graceful shutdown via [termination signals][20]
 - Support for [Docker][19] (`docker pull arachnysdocker/go-camo`)
 
 ---

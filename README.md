@@ -30,6 +30,7 @@ There are however, some crucial changes, and improvements:
 - Support for proxying fonts, stylesheets, and URLs in stylesheets
 - Support for protocol-relative URLs / URLs without a scheme
 - Support for proxying data URIs
+- Support for proxying bad SSL/TLS URIs
 - Higher default timeout
 - Sentry for crash reporting, and aggregation
 - End-to-end health check endpoint (`/health`)

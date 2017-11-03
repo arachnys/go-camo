@@ -63,6 +63,7 @@ func main() {
 		MaxRedirects        int           `long:"max-redirects" default:"3" description:"Maximum number of redirects to follow"`
 		DisableKeepAlivesFE bool          `long:"no-fk" description:"Disable frontend http keep-alive support"`
 		DisableKeepAlivesBE bool          `long:"no-bk" description:"Disable backend http keep-alive support"`
+		SkipTLSVerify       bool          `long:"skip-tls-verify" description:"Skip TLS verification of proxied resources"`
 		BindAddress         string        `long:"listen" default:"0.0.0.0:8080" description:"Address:Port to bind to for HTTP"`
 		BindAddressSSL      string        `long:"ssl-listen" description:"Address:Port to bind to for HTTPS/SSL/TLS"`
 		SSLKey              string        `long:"ssl-key" description:"ssl private key (key.pem) path"`
@@ -125,6 +126,9 @@ func main() {
 	// set keepalive options
 	config.DisableKeepAlivesBE = opts.DisableKeepAlivesBE
 	config.DisableKeepAlivesFE = opts.DisableKeepAlivesFE
+
+	// set tls options
+	config.SkipTLSVerify = opts.SkipTLSVerify
 
 	if opts.AllowList != "" {
 		b, err := ioutil.ReadFile(opts.AllowList)

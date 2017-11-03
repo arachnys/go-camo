@@ -8,6 +8,7 @@ package main
 //go:generate go run ../../tools/genversion.go -pkg $GOPACKAGE -input ../../DEPS.md -output version_info_generated.go
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -207,23 +208,26 @@ func main() {
 	handler := http.HandlerFunc(raven.RecoveryHandler(dumbrouter.ServeHTTP))
 	http.Handle("/", handler)
 
+	stdSrv := &http.Server{
+		Addr:        opts.BindAddress,
+		ReadTimeout: 30 * time.Second}
+
+	sslSrv := &http.Server{
+		Addr:        opts.BindAddressSSL,
+		ReadTimeout: 30 * time.Second}
+
 	if opts.BindAddress != "" {
 		mlog.Printf("Starting server on: %s", opts.BindAddress)
-		go func() {
-			srv := &http.Server{
-				Addr:        opts.BindAddress,
-				ReadTimeout: 30 * time.Second}
+		go func(srv *http.Server) {
 			mlog.Fatal(srv.ListenAndServe())
-		}()
+		}(stdSrv)
 	}
+
 	if opts.BindAddressSSL != "" {
 		mlog.Printf("Starting TLS server on: %s", opts.BindAddressSSL)
-		go func() {
-			srv := &http.Server{
-				Addr:        opts.BindAddressSSL,
-				ReadTimeout: 30 * time.Second}
+		go func(srv *http.Server) {
 			mlog.Fatal(srv.ListenAndServeTLS(opts.SSLCert, opts.SSLKey))
-		}()
+		}(sslSrv)
 	}
 
 	// Listen, and serve will exit the program if they fail / return.
@@ -231,4 +235,20 @@ func main() {
 	// and HTTPS servers in separate Go routines.
 	// We need to block, and exit only when we receive termination signals.
 	<-done
+
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+
+	if opts.BindAddress != "" {
+		mlog.Printf("Shutting down server on: %s", opts.BindAddress)
+		if err := stdSrv.Shutdown(ctx); err != nil {
+			mlog.Print(err)
+		}
+	}
+
+	if opts.BindAddressSSL != "" {
+		mlog.Printf("Shutting down SSL server on: %s", opts.BindAddressSSL)
+		if err := sslSrv.Shutdown(ctx); err != nil {
+			mlog.Print(err)
+		}
+	}
 }

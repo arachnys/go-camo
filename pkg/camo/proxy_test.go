@@ -170,25 +170,29 @@ func TestBadSSL(t *testing.T) {
 		"https://self-signed.badssl.com/style.css",
 	}
 
+	// With TLS verify
+	camoConfigWithTLSVerify := camoConfig
+	camoConfigWithTLSVerify.SkipTLSVerify = false
+
 	for _, testURL := range testURLs {
-		// With TLS verify
-		camoConfig.SkipTLSVerify = false
 
 		req, err := makeReq(testURL)
 		assert.Nil(t, err)
 
-		_, err = processRequest(req, 404, camoConfig)
+		_, err = processRequest(req, 404, camoConfigWithTLSVerify)
 		assert.Nil(t, err)
 	}
 
+	// Without TLS verify
+	camoConfigWithoutTLSVerify := camoConfig
+	camoConfigWithoutTLSVerify.SkipTLSVerify = true
+
 	for _, testURL := range testURLs {
-		// Without TLS verify
-		camoConfig.SkipTLSVerify = true
 
 		req, err := makeReq(testURL)
 		assert.Nil(t, err)
 
-		_, err = processRequest(req, 200, camoConfig)
+		_, err = processRequest(req, 200, camoConfigWithoutTLSVerify)
 		assert.Nil(t, err)
 	}
 }

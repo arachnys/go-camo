@@ -3,7 +3,7 @@ LATEST_COMMIT     := `git rev-parse --short HEAD`
 CURRENT_DATE      := `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
 BUILDDIR          := ${CURDIR}
-GOTEST_FLAGS      := -cpu=1,2
+GOTEST_FLAGS      := -cpu=1,2 -race
 
 TEST_PACKAGES     := `go list ./... | grep -v /vendor/`
 

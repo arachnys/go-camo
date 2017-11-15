@@ -97,6 +97,7 @@ func main() {
 
 	// Sentry
 	raven.SetDSN(opts.SentryDSN)
+	raven.SetRelease(ServerVersion)
 
 	config := camo.Config{}
 	if hmacKey := os.Getenv("GOCAMO_HMAC"); hmacKey != "" {

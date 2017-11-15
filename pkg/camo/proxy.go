@@ -262,16 +262,15 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	u, err := url.Parse(sURL)
-
-	if u.Scheme == "" {
-		// Handle protocol-relative URLs
-		u.Scheme = "https"
-	}
-
 	if err != nil {
 		mlog.Debugm("url parse error", mlog.Map{"err": err})
 		http.Error(w, "Bad url", http.StatusBadRequest)
 		return
+	}
+
+	if u.Scheme == "" {
+		// Handle protocol-relative URLs
+		u.Scheme = "https"
 	}
 
 	u.Host = strings.ToLower(u.Host)

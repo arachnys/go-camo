@@ -155,6 +155,13 @@ func TestDataURIs(t *testing.T) {
 	}
 }
 
+func TestBadURL(t *testing.T) {
+	t.Parallel()
+	testURL := "% test bad url %"
+	_, err := makeTestReq(testURL, 400)
+	assert.Nil(t, err)
+}
+
 func TestProtocolRelativeURL(t *testing.T) {
 	t.Parallel()
 	testURL := "//httpbin.org/get"

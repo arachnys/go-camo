@@ -106,11 +106,10 @@ func writeCSSWithResolvedURLs(baseURL *url.URL, contentEncoding string, hmacKey 
 	var err error
 	if contentEncoding == "gzip" {
 		r, err = gzip.NewReader(r)
-		if r != nil {
-			defer r.Close()
-		}
 		if err != nil {
 			return 0, err
+		} else {
+			defer r.Close()
 		}
 	}
 

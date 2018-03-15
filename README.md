@@ -28,6 +28,7 @@ That is, to proxy non-secure images over SSL/TLS.
 There are however, some crucial changes, and improvements:
 
 - Support for proxying fonts, stylesheets, and URLs in stylesheets
+- Support for proxying gzipped stylesheets
 - Support for protocol-relative URLs / URLs without a scheme
 - Support for proxying data URIs
 - Support for proxying bad SSL/TLS URIs
@@ -149,43 +150,27 @@ Use a [tagged release][21].
 
 Building requires:
 
-*   git
 *   make
-*   go (version 1.8+ recommended)
+*   git
+*   go (latest version recommended. At least version >= 1.9)
 
 Building:
 
-```text
-# show make targets
-$ make
-Available targets:
-  help                this help
-  clean               clean up
-  all                 build binaries and man pages
-  test                run tests
-  cover               run tests with cover output
-  build-setup         fetch dependencies
-  build               build all
-  man                 build all man pages
-  tar                 build release tarball
-  cross-tar           cross compile and build release tarballs
+First, make sure you check out the repository into the proper location
+in your GOPATH. This can be done manually, or with `go get`.
 
-# fetch vendor dependencies
-$ make build-setup
-
-# build all binaries and man pages
-# strips debug symbols by default
-$ make all
-
-# do not strip debug symbols
-$ make all GOBUILD_LDFLAGS=""
+```
+$ export GOPATH=/tmp/go
+$ go get -d github.com/arachnys/go-camo
+$ cd $GOPATH/src/github.com/arachnys/go-camo
 ```
 
-By default, Go-Camo builds with `-tags netgo`. However, for Go versions
-older than 1.5, this may not result in Go-Camo using the netgo resolver unless
-your Go stdlib is also compiled with `-tags netgo`. For this reason, it is
-required to build with at least go-1.5. Building with the latest Go version is
-recommended.
+Once that is done, you are ready to build!
+
+```
+# show make targets
+$ make
+```
 
 ## Running
 

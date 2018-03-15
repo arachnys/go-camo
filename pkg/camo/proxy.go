@@ -104,19 +104,25 @@ func hexEncodeCSSURLs(baseURL *url.URL, hmacKey []byte, css []byte) ([]byte, err
 
 func writeCSSWithResolvedURLs(baseURL *url.URL, contentEncoding string, hmacKey []byte, w io.Writer, r io.ReadCloser) (int64, error) {
 	var err error
+	var gr io.ReadCloser
+
 	if contentEncoding == "gzip" {
-		r, err = gzip.NewReader(r)
-		if r != nil {
-			defer r.Close()
-		}
+		gr, err = gzip.NewReader(r)
 		if err != nil {
 			return 0, err
 		}
+		r = gr
 	}
 
 	css, err := ioutil.ReadAll(r)
 	if err != nil {
 		return 0, err
+	}
+
+	if gr != nil {
+		if err := gr.Close(); err != nil {
+			return 0, err
+		}
 	}
 
 	resolvedCSS, err := hexEncodeCSSURLs(baseURL, hmacKey, css)

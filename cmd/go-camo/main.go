@@ -1,11 +1,11 @@
-// Copyright (c) 2012-2016 Eli Janssen
+// Copyright (c) 2012-present Eli Janssen
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
 // go-camo daemon (go-camod)
 package main
 
-//go:generate go run ../../tools/genversion.go -pkg $GOPACKAGE -input ../../DEPS.md -output version_info_generated.go
+//go:generate go run ../../tools/genversion.go -pkg $GOPACKAGE -input ../../Gopkg.toml -output main_vers_gen.go
 
 import (
 	"context"

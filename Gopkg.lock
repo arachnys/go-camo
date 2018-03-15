@@ -4,14 +4,20 @@
 [[projects]]
   name = "github.com/cactus/mlog"
   packages = ["."]
-  revision = "fc2dce550187f3b7c4b871a2528b6e2aebe2580b"
+  revision = "b0f3ca06304d8079f8111461ffdac48dfb7802f4"
+  version = "v1.0.1"
+
+[[projects]]
+  name = "github.com/cactus/tai64"
+  packages = ["."]
+  revision = "9fff3ffed63c4047456ef9d5c5708f260584e9ee"
   version = "v1.0.0"
 
 [[projects]]
   name = "github.com/certifi/gocertifi"
   packages = ["."]
-  revision = "3fd9e1adb12b72d2f3f82191d49be9b93c69f67c"
-  version = "2017.07.27"
+  revision = "deb3ae2ef2610fde3330947281941c562861188b"
+  version = "2018.01.18"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -23,13 +29,28 @@
   branch = "master"
   name = "github.com/getsentry/raven-go"
   packages = ["."]
-  revision = "1452f6376ddb15c546b6d7567e1d9518765391b5"
+  revision = "563b81fc02b75d664e54da31f787c2cc2186780b"
 
 [[projects]]
   name = "github.com/jessevdk/go-flags"
   packages = ["."]
   revision = "96dc06278ce32a0e9d957d590bb987c81ee66407"
   version = "v1.3.0"
+
+[[projects]]
+  name = "github.com/pelletier/go-toml"
+  packages = [
+    ".",
+    "query"
+  ]
+  revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -40,12 +61,12 @@
 [[projects]]
   name = "github.com/stretchr/testify"
   packages = ["assert"]
-  revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
-  version = "v1.1.4"
+  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
+  version = "v1.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5ec9b65c3b26e38f61c6971b8d247b4c8d566c3bb9bcf5d9d0fe30843c588e54"
+  inputs-digest = "34382d592088438d2cc3813602827c0d338d8c139f54fd70bca17ad42f441fbd"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -147,6 +147,7 @@ func TestDataURIs(t *testing.T) {
 		"data:,Hello%2C%20World!",
 		"data:text/plain;base64,SGVsbG8sIFdvcmxkIQ%3D%3D",
 		"data:text/html,<script>alert('hi');</script>",
+		"data:image/gif;base64,",
 	}
 
 	for _, testURI := range testUnacceptableURIs {

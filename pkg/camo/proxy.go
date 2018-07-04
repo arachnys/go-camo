@@ -179,6 +179,10 @@ func parseDataURI(dataURI string) ([]byte, string, error) {
 	}
 
 	group := re.FindStringSubmatch(dataURI)
+	if len(group) < 3 {
+		return nil, "", errors.New("failed to match content-type, and raw data")
+	}
+
 	contentType := group[1]
 	rawData := group[2]
 
